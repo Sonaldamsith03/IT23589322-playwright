@@ -47,38 +47,23 @@ test.describe('ITPM Assignment 1 Automation', () => {
   test.setTimeout(600000); 
 
   test.beforeAll(async () => {
-    browserInstance = await chromium.launch({ 
-      headless: false,
-      args: ['--disable-blink-features=AutomationControlled']
-    });
-    const context = await browserInstance.newContext({
-      viewport: { width: 1280, height: 720 },
-      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
-    });
-    page = await context.newPage();
-    await page.goto('https://www.swifttranslator.com/', { waitUntil: 'networkidle', timeout: 90000 });
+    browserInstance = await chromium.launch({ headless: true });
+    page = await browserInstance.newPage();
+    await page.goto('https://www.swifttranslator.com/', { waitUntil: 'networkidle' });
   });
 
   for (const tc of testCases) {
     test(`${tc.id}: ${tc.input}`, async () => {
-      const inputArea = page.locator('textarea').first(); 
-      const outputArea = page.locator('textarea').nth(1);
-      
-      await inputArea.waitFor({ state: 'visible', timeout: 30000 });
-      
-      // 1. CLEAR and SET VALUE
-      await inputArea.fill(tc.input);
+      const input = page.locator('textarea');
+      const output = page.locator('div.whitespace-pre-wrap').first();
 
-      // 2. THE BLUR FIX: Remove focus from the box to force-close any dropdowns
-      await inputArea.blur();
-      await page.keyboard.press('Escape');
-      await page.mouse.click(10, 10); 
+      await input.fill(tc.input);
 
-      // 3. WAIT FOR TRANSLATION
-      await page.waitForTimeout(5000); // 5 seconds to be absolutely sure
+      // Using your friend's logic: Wait until output div has text
+      await expect(output).not.toBeEmpty({ timeout: 15000 });
       
-      const actualValue = await outputArea.inputValue();
-      console.log(`[${tc.id}] Result: ${actualValue}`);
+      const actualValue = await output.innerText();
+      console.log(`[${tc.id}] Output found: ${actualValue.trim()}`);
       
       expect(actualValue.trim()).not.toBe('');
     });
